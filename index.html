@@ -359,7 +359,7 @@ function startAnimation(){
   drawScene();
 }
 // --------------------Terminal Code--------------------------------------------
-// ------------------- Smooth Terminal with Rolling Decimals -------------------
+// ------------------- Terminal Telemetry -------------------
 const terminal = document.getElementById('terminal');
 const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
 
@@ -399,17 +399,7 @@ function typeLine(lineEl, text, speed = 40) {
   });
 }
 
-// Animate initial placeholders
-async function typeInitial() {
-  for (let i = 0; i < placeholderLines.length; i++) {
-    await typeLine(lineElements[i], placeholderLines[i]);
-  }
-  // After placeholders, fetch live telemetry
-  fetchAndAnimateTelemetry();
-  setInterval(fetchAndAnimateTelemetry, 30000);
-}
-
-// Smoothly animate a numeric value
+// Animate numeric value smoothly
 function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, rolling = true) {
   const steps = Math.ceil(duration / 30);
   let currentStep = 0;
@@ -437,7 +427,7 @@ function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, ro
   });
 }
 
-// Store last known values for smooth animation
+// Last known values for smooth animation
 let lastDistance = 0;
 let lastDelay = 0;
 
@@ -447,17 +437,17 @@ async function fetchAndAnimateTelemetry() {
     const res = await fetch(WORKER_URL);
     const data = await res.json();
 
-    // Animate timestamp (just retype)
+    // Timestamp
     lineElements[2].textContent = `> TIMESTAMP: ${data.timestamp_utc}`;
 
-    // Animate distance and signal delay smoothly with rolling decimals
-    const newDistance = data.distance_light_days;
-    const newDelay = data.one_way_hours;
+    // Correct fields from Worker JSON
+    const newDistance = data.distance_light_days;       // distance in light-days
+    const newDelay = data.one_way_light_seconds / 3600; // convert seconds to hours
 
+    // Animate distance and delay
     await animateValue(lineElements[3], '> DISTANCE: ', lastDistance, newDistance, 9, 800, true);
     await animateValue(lineElements[4], '> SIGNAL DELAY: ', lastDelay, newDelay, 4, 800, true);
 
-    // Update last known values
     lastDistance = newDistance;
     lastDelay = newDelay;
 
@@ -473,6 +463,16 @@ async function fetchAndAnimateTelemetry() {
     lineElements[3].textContent = '> DISTANCE: ERROR';
     lineElements[4].textContent = '> SIGNAL DELAY: ERROR';
   }
+}
+
+// Animate initial placeholders and start live fetch loop
+async function typeInitial() {
+  for (let i = 0; i < placeholderLines.length; i++) {
+    await typeLine(lineElements[i], placeholderLines[i]);
+  }
+  // Fetch live telemetry every 30 seconds
+  fetchAndAnimateTelemetry();
+  setInterval(fetchAndAnimateTelemetry, 30000);
 }
 
 // Start terminal animation
