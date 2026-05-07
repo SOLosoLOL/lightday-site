@@ -359,11 +359,12 @@ function startAnimation(){
   drawScene();
 }
 // --------------------Terminal Code--------------------------------------------
+<script>
 // ------------------- Terminal Telemetry -------------------
 const terminal = document.getElementById('terminal');
-const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
+const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/'; // ✅ must match your deployed Worker
 
-// Placeholder lines
+// Placeholder lines while loading
 const placeholderLines = [
   '> CONNECTING TO VOYAGER 1...',
   '> SIGNAL LOCKED',
@@ -374,17 +375,15 @@ const placeholderLines = [
   '> RECEIVING DATA...'
 ];
 
-// Clear terminal and create line elements
+// Clear terminal and create divs for each line
 terminal.innerHTML = '';
-const lineElements = [];
-placeholderLines.forEach(() => {
+const lineElements = placeholderLines.map(() => {
   const div = document.createElement('div');
-  div.textContent = '';
   terminal.appendChild(div);
-  lineElements.push(div);
+  return div;
 });
 
-// Typing function for placeholders
+// Typing animation for placeholder lines
 function typeLine(lineEl, text, speed = 40) {
   return new Promise(resolve => {
     let i = 0;
@@ -399,8 +398,8 @@ function typeLine(lineEl, text, speed = 40) {
   });
 }
 
-// Animate numeric value smoothly
-function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, rolling = true) {
+// Animate numeric value smoothly with optional rolling decimals
+function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800) {
   const steps = Math.ceil(duration / 30);
   let currentStep = 0;
   const stepValue = (to - from) / steps;
@@ -410,14 +409,12 @@ function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, ro
       currentStep++;
       let value = from + stepValue * currentStep;
 
-      // Rolling decimal effect
-      if (rolling && currentStep < steps) {
-        const factor = 10 ** (decimals - 1);
-        const jitter = (Math.random() * 2 - 1) / factor;
-        value += jitter;
-      }
+      // Add tiny rolling effect while animating
+      const factor = 10 ** (decimals - 1);
+      const jitter = (Math.random() * 2 - 1) / factor;
+      value += jitter;
 
-      lineEl.textContent = `${prefix}${value.toFixed(decimals)}${prefix.includes("DISTANCE") ? " LIGHT-DAYS" : " HOURS"}`;
+      lineEl.textContent = `${prefix}${value.toFixed(decimals)}${prefix.includes('DISTANCE') ? ' LIGHT-DAYS' : ' HOURS'}`;
 
       if (currentStep >= steps) {
         clearInterval(interval);
@@ -427,27 +424,28 @@ function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, ro
   });
 }
 
-// Last known values for smooth animation
+// Last known values
 let lastDistance = 0;
 let lastDelay = 0;
 
-// Fetch live telemetry and animate changes
+// Fetch live telemetry and animate
 async function fetchAndAnimateTelemetry() {
   try {
     const res = await fetch(WORKER_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    // Timestamp
+    // Update timestamp
     lineElements[2].textContent = `> TIMESTAMP: ${data.timestamp_utc}`;
 
-    // Correct fields from Worker JSON
-    const newDistance = data.distance_light_days;       // distance in light-days
-    const newDelay = data.one_way_light_seconds / 3600; // convert seconds to hours
+    // Animate distance and one-way light time (hours)
+    const newDistance = data.distance_light_days || 0;
+    const newDelay = (data.one_way_light_seconds || 0) / 3600; // convert seconds → hours
 
-    // Animate distance and delay
-    await animateValue(lineElements[3], '> DISTANCE: ', lastDistance, newDistance, 9, 800, true);
-    await animateValue(lineElements[4], '> SIGNAL DELAY: ', lastDelay, newDelay, 4, 800, true);
+    await animateValue(lineElements[3], '> DISTANCE: ', lastDistance, newDistance, 9);
+    await animateValue(lineElements[4], '> SIGNAL DELAY: ', lastDelay, newDelay, 4);
 
+    // Save last values
     lastDistance = newDistance;
     lastDelay = newDelay;
 
@@ -458,25 +456,24 @@ async function fetchAndAnimateTelemetry() {
     }
 
   } catch (err) {
-    console.error('Error fetching Voyager 1 data:', err);
+    console.error('Error fetching Voyager data:', err);
     lineElements[2].textContent = '> TIMESTAMP: ERROR';
     lineElements[3].textContent = '> DISTANCE: ERROR';
     lineElements[4].textContent = '> SIGNAL DELAY: ERROR';
   }
 }
 
-// Animate initial placeholders and start live fetch loop
+// Initial typing animation, then fetch live telemetry every 30s
 async function typeInitial() {
   for (let i = 0; i < placeholderLines.length; i++) {
     await typeLine(lineElements[i], placeholderLines[i]);
   }
-  // Fetch live telemetry every 30 seconds
   fetchAndAnimateTelemetry();
   setInterval(fetchAndAnimateTelemetry, 30000);
 }
 
-// Start terminal animation
 typeInitial();
+</script>
 
 // Buy button particles
 const buyBtn = document.getElementById('buyBtn');
