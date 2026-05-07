@@ -361,53 +361,91 @@ function startAnimation(){
 
 // Terminal typing
 // ------------------- Real-time Voyager 1 telemetry via Cloudflare Worker -------------------
+// ------------------- Real-time Voyager 1 telemetry with typing effect -------------------
 const terminal = document.getElementById('terminal');
 
 // Replace with your actual Worker URL
 const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
 
-// Initialize terminal lines with placeholders
-function initTelemetry() {
-  terminal.innerHTML = '';
-  const lines = [
-    '> CONNECTING TO VOYAGER 1...',
-    '> SIGNAL LOCKED',
-    '> TIMESTAMP: --',
-    '> DISTANCE: -- LIGHT-DAYS',
-    '> SIGNAL DELAY: -- HOURS',
-    '> STATUS: ACTIVE',
-    '> RECEIVING DATA...'
-  ];
-  lines.forEach(txt => {
-    const div = document.createElement('div');
-    div.textContent = txt;
-    terminal.appendChild(div);
+// Initialize terminal with placeholder lines
+const placeholderLines = [
+  '> CONNECTING TO VOYAGER 1...',
+  '> SIGNAL LOCKED',
+  '> TIMESTAMP: --',
+  '> DISTANCE: -- LIGHT-DAYS',
+  '> SIGNAL DELAY: -- HOURS',
+  '> STATUS: ACTIVE',
+  '> RECEIVING DATA...'
+];
+
+// Clear terminal and create line elements
+terminal.innerHTML = '';
+const lineElements = [];
+placeholderLines.forEach(txt => {
+  const div = document.createElement('div');
+  div.textContent = '';
+  terminal.appendChild(div);
+  lineElements.push(div);
+});
+
+// Typing function for a line
+function typeLine(lineEl, text, speed = 40) {
+  return new Promise(resolve => {
+    let i = 0;
+    const interval = setInterval(() => {
+      lineEl.textContent += text.charAt(i);
+      i++;
+      if (i >= text.length) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, speed);
   });
 }
-initTelemetry();
 
-// Function to fetch data from Worker and update terminal
+// Animate initial placeholders
+async function typeInitial() {
+  for (let i = 0; i < placeholderLines.length; i++) {
+    await typeLine(lineElements[i], placeholderLines[i]);
+  }
+}
+typeInitial();
+
+// Fetch real-time data and update terminal with typing
 async function updateTelemetry() {
   try {
     const res = await fetch(WORKER_URL);
     const data = await res.json();
 
-    terminal.children[2].textContent = `> TIMESTAMP: ${data.timestamp_utc}`;
-    terminal.children[3].textContent = `> DISTANCE: ${data.distance_light_days.toFixed(6)} LIGHT-DAYS`;
-    terminal.children[4].textContent = `> SIGNAL DELAY: ${data.one_way_hours.toFixed(2)} HOURS`;
+    const updates = [
+      `> TIMESTAMP: ${data.timestamp_utc}`,
+      `> DISTANCE: ${data.distance_light_days.toFixed(6)} LIGHT-DAYS`,
+      `> SIGNAL DELAY: ${data.one_way_hours.toFixed(2)} HOURS`
+    ];
+
+    // Type updates with a short delay
+    for (let i = 0; i < updates.length; i++) {
+      const lineEl = lineElements[i + 2]; // offset: timestamp is line 2
+      lineEl.textContent = ''; // clear previous
+      await typeLine(lineEl, updates[i], 30);
+    }
 
     // occasional glitch effect
-    if(Math.random() < 0.05){
+    if (Math.random() < 0.05) {
       terminal.classList.add('glitch');
-      setTimeout(()=> terminal.classList.remove('glitch'), 200);
+      setTimeout(() => terminal.classList.remove('glitch'), 200);
     }
-  } catch(err) {
+
+  } catch (err) {
     console.error('Error fetching Voyager 1 data:', err);
+    lineElements[2].textContent = '> TIMESTAMP: ERROR';
+    lineElements[3].textContent = '> DISTANCE: ERROR';
+    lineElements[4].textContent = '> SIGNAL DELAY: ERROR';
   }
 }
 
-// Update every 30 seconds
-updateTelemetry(); // initial fetch
+// Fetch immediately and then every 30 seconds
+setTimeout(updateTelemetry, 2000); // wait 2s to allow initial typing
 setInterval(updateTelemetry, 30000);
 
 // Buy button particles
