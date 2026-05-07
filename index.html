@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIGHTDAY ($LDAY)</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: monospace;
+  overflow-x: hidden;
+  background: black;
+  color: #ffaa33;
+}
+
+.hero {
+  background: url('lightday_banner.png') center center / contain no-repeat;
+  width: 100%;
+  height: auto;
+  min-height: 500px;
+}
+
+.starfield-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 600px;
+}
+
+canvas#stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+}
+
+.page-content {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.section {
+  padding: 60px 20px;
+  max-width: 900px;
+  margin: 0 auto 80px auto;
+  text-align: center;
+  background: transparent;
+}
+
+.logo-container {
+  perspective: 1200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-linear {
+  width: 240px;
+  filter: drop-shadow(0 0 20px gold) drop-shadow(0 0 35px rgba(255,170,50,0.7));
+  transform-style: preserve-3d;
+  animation: float3d 8s ease-in-out infinite;
+}
+
+@keyframes float3d {
+  0% { transform: rotateX(0deg) rotateY(0deg) translateZ(0px); }
+  20% { transform: rotateX(5deg) rotateY(10deg) translateZ(10px); }
+  40% { transform: rotateX(-5deg) rotateY(15deg) translateZ(15px); }
+  60% { transform: rotateX(5deg) rotateY(-10deg) translateZ(10px); }
+  80% { transform: rotateX(-2deg) rotateY(-5deg) translateZ(5px); }
+  100% { transform: rotateX(0deg) rotateY(0deg) translateZ(0px); }
+}
+
+.hero-description-linear {
+  color: #ffaa33;
+  font-size: 22px;
+  text-align: center;
+  max-width: 700px;
+  margin: 20px auto 0 auto;
+  line-height: 1.5;
+}
+
+.button-buy {
+  position: relative;
+  background: gold;
+  color: black;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 0 15px gold, 0 0 30px gold, 0 0 45px rgba(255,170,50,0.5);
+  animation: glowPulse 1.5s infinite alternate;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-block;
+  overflow: visible;
+  z-index: 2;
+}
+.button-buy:hover { 
+  transform: scale(1.1);
+  box-shadow: 0 0 25px gold, 0 0 50px gold, 0 0 70px rgba(255,170,50,0.7);
+}
+
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 15px gold, 0 0 30px gold, 0 0 45px rgba(255,170,50,0.5); }
+  100% { box-shadow: 0 0 25px gold, 0 0 50px gold, 0 0 70px rgba(255,170,50,0.7); }
+}
+
+.terminal {
+  position: relative;
+  width: 80%;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #050300;
+  color: #ffaa33;
+  border: 10px solid #333;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 0 25px #ffaa33, 0 0 50px #ffaa33 inset;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 18px;
+  overflow: hidden;
+}
+
+.terminal::before {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 10px;
+  background: #333;
+  border-radius: 3px;
+  box-shadow: 0 0 8px #000;
+}
+
+.terminal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,170,50,0.06),
+    rgba(255,170,50,0.06) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  pointer-events: none;
+}
+
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 22%, 24%, 55% { opacity: 0.85; }
+}
+.terminal.flicker { animation: flicker 0.15s infinite; }
+
+.disclaimer {
+  font-size: 12px;
+  color: #ffaa33;
+  opacity: 0.7;
+  text-align: center;
+  margin: 20px auto;
+  max-width: 800px;
+}
+.footer { opacity: 0.5; padding: 20px; text-align: center; }
+
+@media(max-width:768px){
+  .logo-linear { width:180px; margin-bottom:15px; }
+  .hero-description-linear { font-size:16px; }
+  .section { padding: 30px 20px; margin-bottom: 60px; }
+}
+.terminal.glitch {
+  animation: glitchAnim 0.2s;
+}
+
+@keyframes glitchAnim {
+  0% { transform: translate(0); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -1px); }
+  75% { transform: translate(-1px, 2px); }
+  100% { transform: translate(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="hero"></div>
+
+<div class="starfield-wrapper">
+  <canvas id="stars"></canvas>
+
+  <div class="page-content">
+
+    <!-- LOGO -->
+    <div class="section logo-container">
+      <img src="logo.png" class="logo-linear">
+    </div>
+
+    <!-- HERO DESCRIPTION -->
+    <div class="section">
+      <p class="hero-description-linear" style="line-height:1.5; color:#ffaa33;">
+        <strong>$LDAY – Meme Token at the Edge of Space</strong><br><br>
+        Celebrate humanity’s first step into the stars! As <strong>Voyager 1 nears one light-day from Earth</strong>, $LDAY brings cosmic adventure to the blockchain.<br><br>
+        Track its journey, share memes, and join the mission as our token soars through the galaxy of DeFi.
+      </p>
+<div class="section">
+  <video 
+  id="promoVideo"
+  autoplay 
+  muted 
+  loop 
+  playsinline 
+  style="
+    width:100%;
+    max-width:700px;
+    border-radius:12px;
+    box-shadow:0 0 25px gold;
+    margin-top:20px;
+  ">
+  <source src="promo.mp4" type="video/mp4">
+</video>
+<button onclick="toggleSound()" class="button-buy" style="margin-top:10px;">
+  🔇 Sound Off
+</button>
+</div>
+    </div>
+
+    <!-- BUY BUTTON -->
+    <div class="section">
+      <a href="YOUR_PUMPFUN_LINK" target="_blank" class="button-buy" id="buyBtn">Buy on Pump.fun</a>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="section">
+      <h2>Deep Space Telemetry</h2>
+      <div class="terminal" id="terminal"></div>
+    </div>
+
+<div class="section">
+  <h2>Market Telemetry</h2>
+
+  <div style="
+    border:2px solid gold;
+    border-radius:12px;
+    box-shadow:0 0 25px gold, inset 0 0 15px rgba(255,170,50,0.3);
+    overflow:hidden;
+    max-width:900px;
+    margin:20px auto;
+  ">
+
+    <iframe 
+      src="https://dexscreener.com/solana/YOUR_TOKEN_ADDRESS"
+      width="100%" 
+      height="420"
+      style="border:none;">
+    </iframe>
+
+  </div>
+</div>
+
+    <!-- CONTRACT VERIFICATION -->
+    <div class="section">
+      <h2>Contract</h2>
+      <div id="contract">0xYourTokenAddressHere</div>
+      <button class="button-buy" onclick="copyContract()">Copy</button>
+      <p style="opacity:0.7; font-size:12px;">
+        Verified $LDAY token contract on the blockchain
+      </p>
+    </div>
+
+    <!-- TERMS / PRIVACY LINKS -->
+    <div class="section" style="font-size:12px; opacity:0.7;">
+      <a href="#" onclick="openModal('terms')" style="color:#ffaa33;">Terms of Use</a> | 
+      <a href="#" onclick="openModal('privacy')" style="color:#ffaa33;">Privacy Policy</a>
+    </div>
+
+    <!-- SOCIAL -->
+    <div class="section">
+      <a href="https://twitter.com/YourTwitterHandle" target="_blank" class="button-buy">Twitter</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- DISCLAIMER & FOOTER -->
+<div class="disclaimer">
+<strong>Disclaimer:</strong> $LDAY is a meme token for entertainment purposes only. It carries significant financial risk. This website and its contents do not constitute financial, investment, or legal advice. Users should do their own research and understand the risks before buying or trading. This project is independent and not affiliated with any government agency or space organization.
+</div>
+<div class="footer">$LDAY — Deep Space Transmission</div>
+
+<!-- MODAL POPUP -->
+<div id="modalContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:#ffaa33; z-index:9999; overflow:auto; padding:40px; box-sizing:border-box;">
+  <div style="max-width:800px; margin:auto; background:#000; padding:30px; border:2px solid gold; border-radius:12px; position:relative;">
+    <span onclick="closeModal()" style="position:absolute; top:15px; right:20px; cursor:pointer; font-size:24px;">&times;</span>
+    <div id="modalContent" style="line-height:1.5;"></div>
+  </div>
+</div>
+
+<script>
+// ------------------- Flying logos + terminal -------------------
+const wrapper = document.querySelector('.starfield-wrapper');
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ canvas.width = wrapper.clientWidth; canvas.height = wrapper.clientHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let logoImg = new Image();
+logoImg.src = 'logo.png';
+logoImg.onload = startAnimation;
+
+function startAnimation(){
+  const logoCount = 25;
+  let logos = [];
+  for(let i=0;i<logoCount;i++){
+    logos.push({
+      img: logoImg,
+      baseX: canvas.width + Math.random()*50,
+      baseY: Math.random()*canvas.height,
+      vx: -(2 + Math.random()*2),
+      vy: -(0.5 + Math.random()*1),
+      size: 28 + Math.random()*10,
+      rotation: Math.random()*360,
+      rotationSpeed: (Math.random()-0.5)*0.12
+    });
+  }
+
+  function drawScene(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let scrollOffset = window.scrollY * 0.2;
+    logos.forEach(l=>{
+      ctx.save();
+      ctx.translate(l.baseX + scrollOffset, l.baseY);
+      ctx.rotate(l.rotation);
+      ctx.drawImage(l.img,-l.size/2,-l.size/2,l.size,l.size);
+      ctx.restore();
+
+      l.baseX += l.vx;
+      l.baseY += l.vy;
+      l.rotation += l.rotationSpeed;
+
+      if(l.baseX + l.size < 0 || l.baseY + l.size < 0){
+        l.baseX = canvas.width + Math.random()*50;
+        l.baseY = Math.random()*canvas.height;
+        l.vx = -(2 + Math.random()*2);
+        l.vy = -(0.5 + Math.random()*1);
+        l.size = 28 + Math.random()*10;
+        l.rotation = Math.random()*360;
+        l.rotationSpeed = (Math.random()-0.5)*0.12;
+      }
+    });
+    requestAnimationFrame(drawScene);
+  }
+  drawScene();
+}
+
+// Terminal typing
+// ------------------- Real-time Voyager 1 telemetry via Cloudflare Worker -------------------
+const terminal = document.getElementById('terminal');
+
+// Replace with your actual Worker URL
+const WORKER_URL = 'https://voyager1.youraccount.workers.dev';
+
+// Initialize terminal lines with placeholders
+function initTelemetry() {
+  terminal.innerHTML = '';
+  const lines = [
+    '> CONNECTING TO VOYAGER 1...',
+    '> SIGNAL LOCKED',
+    '> TIMESTAMP: --',
+    '> DISTANCE: -- LIGHT-DAYS',
+    '> SIGNAL DELAY: -- HOURS',
+    '> STATUS: ACTIVE',
+    '> RECEIVING DATA...'
+  ];
+  lines.forEach(txt => {
+    const div = document.createElement('div');
+    div.textContent = txt;
+    terminal.appendChild(div);
+  });
+}
+initTelemetry();
+
+// Function to fetch data from Worker and update terminal
+async function updateTelemetry() {
+  try {
+    const res = await fetch(WORKER_URL);
+    const data = await res.json();
+
+    terminal.children[2].textContent = `> TIMESTAMP: ${data.timestamp_utc}`;
+    terminal.children[3].textContent = `> DISTANCE: ${data.distance_light_days.toFixed(6)} LIGHT-DAYS`;
+    terminal.children[4].textContent = `> SIGNAL DELAY: ${data.one_way_hours.toFixed(2)} HOURS`;
+
+    // occasional glitch effect
+    if(Math.random() < 0.05){
+      terminal.classList.add('glitch');
+      setTimeout(()=> terminal.classList.remove('glitch'), 200);
+    }
+  } catch(err) {
+    console.error('Error fetching Voyager 1 data:', err);
+  }
+}
+
+// Update every 30 seconds
+updateTelemetry(); // initial fetch
+setInterval(updateTelemetry, 30000);
+
+// Buy button particles
+const buyBtn = document.getElementById('buyBtn');
+buyBtn.addEventListener('click', () => {
+  if (typeof spawnParticles === "function") {
+    spawnParticles();
+  }
+});
+const particleCanvas = document.createElement('canvas');
+particleCanvas.style.position = 'absolute';
+particleCanvas.style.pointerEvents = 'none';
+particleCanvas.style.top = '0';
+particleCanvas.style.left = '0';
+particleCanvas.width = window.innerWidth;
+particleCanvas.height = window.innerHeight;
+document.body.appendChild(particleCanvas);
+
+const pCtx = particleCanvas.getContext('2d');
+let particles = [];
+
+buyBtn.addEventListener('mouseenter', ()=>{
+  const rect = buyBtn.getBoundingClientRect();
+  for(let i=0;i<20;i++){
+    particles.push({
+      x: rect.left + rect.width/2,
+      y: rect.top + rect.height/2,
+      vx: (Math.random()-0.5)*4,
+      vy: (Math.random()-1.5)*4,
+      alpha: 1,
+      size: 2 + Math.random()*3
+    });
+  }
+});
+
+function animateParticles(){
+  pCtx.clearRect(0,0,particleCanvas.width, particleCanvas.height);
+  for(let i=particles.length-1; i>=0; i--){
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.alpha -= 0.02;
+    if(p.alpha <= 0){
+      particles.splice(i,1);
+      continue;
+    }
+    pCtx.fillStyle = `rgba(255,215,0,${p.alpha})`;
+    pCtx.beginPath();
+    pCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    pCtx.fill();
+  }
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// Copy contract function
+function copyContract(e){
+  const text = document.getElementById('contract').innerText;
+  navigator.clipboard.writeText(text);
+
+  const btn = e?.target || document.querySelector('[onclick*="copyContract"]');
+  const original = btn.innerText;
+
+  btn.innerText = "Copied!";
+  setTimeout(()=> btn.innerText = original, 1200);
+}
+
+// ---------------- MODAL TERMS/PRIVACY ----------------
+const modalTexts = {
+  terms: `
+  <h1>Terms of Use</h1>
+  <p>Welcome to the $LDAY website. By accessing or using this site, you agree to comply with and be bound by the following terms and conditions:</p>
+  <h2>1. Entertainment Purpose Only</h2>
+  <p>$LDAY is a meme token created for entertainment and community engagement purposes only. Nothing on this website constitutes financial, investment, or legal advice.</p>
+  <h2>2. Risk Acknowledgment</h2>
+  <p>You acknowledge that participating in cryptocurrency activities, including buying, trading, or holding $LDAY tokens, carries significant risk. You are solely responsible for your actions.</p>
+  <h2>3. No Guarantees</h2>
+  <p>This website and any associated content make no guarantees regarding token performance, profits, or returns. Past activity is not indicative of future results.</p>
+  <h2>4. Intellectual Property</h2>
+  <p>All graphics, images, and content on this site are the property of $LDAY unless otherwise stated. You may not reproduce, copy, or distribute without permission.</p>
+  <h2>5. External Links</h2>
+  <p>This site may contain links to external websites. We are not responsible for content or accuracy on third-party sites.</p>
+  <h2>6. Disclaimer</h2>
+  <p>By using this site, you agree to release $LDAY and its creators from any liability related to your participation, use of content, or financial decisions.</p>
+  <h2>7. Changes to Terms</h2>
+  <p>$LDAY reserves the right to update or modify these terms at any time. Continued use of the website constitutes acceptance of the revised terms.</p>
+  `,
+  privacy: `
+  <h1>Privacy Policy</h1>
+  <p>Your privacy is important to $LDAY. This policy explains what information we collect, how it is used, and your rights.</p>
+  <h2>1. Information Collection</h2>
+  <p>$LDAY does not collect personal data unless you voluntarily provide it, for example via contact forms or social media interactions.</p>
+  <h2>2. Use of Information</h2>
+  <p>Any information provided is used solely for communication or to improve the website experience. We do not sell, rent, or trade personal data.</p>
+  <h2>3. Cookies and Analytics</h2>
+  <p>We may use third-party analytics tools to understand site traffic. No personally identifiable information is shared.</p>
+  <h2>4. External Links</h2>
+  <p>This website may contain links to third-party websites. $LDAY is not responsible for their privacy practices.</p>
+  <h2>5. Data Security</h2>
+  <p>We take reasonable measures to protect any information you provide, but no method is 100% secure online.</p>
+  <h2>6. Changes to This Policy</h2>
+  <p>$LDAY may update this privacy policy at any time. Continued use of the website constitutes acceptance of any changes.</p>
+  `
+};
+
+function openModal(type){
+  document.getElementById('modalContent').innerHTML = modalTexts[type];
+  document.getElementById('modalContainer').style.display = 'block';
+}
+
+function closeModal(){
+  document.getElementById('modalContainer').style.display = 'none';
+}
+(function(){
+
+  const btn = document.getElementById('buyBtn');
+  if(!btn) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.position = 'fixed';
+  canvas.style.top = 0;
+  canvas.style.left = 0;
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = 999;
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  let particles = [];
+
+  function spawn(){
+    const rect = btn.getBoundingClientRect();
+    for(let i=0;i<20;i++){
+      particles.push({
+        x: rect.left + rect.width/2,
+        y: rect.top + rect.height/2,
+        vx: (Math.random()-0.5)*5,
+        vy: (Math.random()-1.5)*5,
+        a: 1,
+        size: 2 + Math.random()*3
+      });
+    }
+  }
+
+  btn.addEventListener('click', spawn);
+btn.addEventListener('mouseenter', spawn);
+
+  function loop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      p.a -= 0.02;
+
+      ctx.fillStyle = `rgba(255,215,0,${p.a})`;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    particles = particles.filter(p => p.a > 0);
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+
+})();
+function toggleSound(){
+  const vid = document.getElementById('promoVideo');
+  const btn = event.target;
+
+  if(vid.muted){
+    vid.muted = false;
+    vid.volume = 1;
+    btn.innerText = "🔊 Sound On";
+  } else {
+    vid.muted = true;
+    btn.innerText = "🔇 Sound Off";
+  }
+}
+
+</script>
+
+</body>
+</html>
