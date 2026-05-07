@@ -365,7 +365,7 @@ const terminal = document.getElementById('terminal');
 // Replace with your actual Worker URL
 const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
 
-// Initialize terminal with placeholder lines
+// Placeholder lines
 const placeholderLines = [
   '> CONNECTING TO VOYAGER 1...',
   '> SIGNAL LOCKED',
@@ -379,14 +379,14 @@ const placeholderLines = [
 // Clear terminal and create line elements
 terminal.innerHTML = '';
 const lineElements = [];
-placeholderLines.forEach(txt => {
+placeholderLines.forEach(() => {
   const div = document.createElement('div');
   div.textContent = '';
   terminal.appendChild(div);
   lineElements.push(div);
 });
 
-// Typing function for a line
+// Typing function
 function typeLine(lineEl, text, speed = 40) {
   return new Promise(resolve => {
     let i = 0;
@@ -406,11 +406,13 @@ async function typeInitial() {
   for (let i = 0; i < placeholderLines.length; i++) {
     await typeLine(lineElements[i], placeholderLines[i]);
   }
+  // After initial typing completes, start live telemetry
+  fetchAndTypeTelemetry();
+  setInterval(fetchAndTypeTelemetry, 30000);
 }
-typeInitial();
 
-// Fetch real-time data and update terminal with typing
-async function updateTelemetry() {
+// Function to fetch live telemetry and type
+async function fetchAndTypeTelemetry() {
   try {
     const res = await fetch(WORKER_URL);
     const data = await res.json();
@@ -421,9 +423,9 @@ async function updateTelemetry() {
       `> SIGNAL DELAY: ${data.one_way_hours.toFixed(2)} HOURS`
     ];
 
-    // Type updates with a short delay
+    // Type each update line individually
     for (let i = 0; i < updates.length; i++) {
-      const lineEl = lineElements[i + 2]; // offset: timestamp is line 2
+      const lineEl = lineElements[i + 2]; // timestamp, distance, delay
       lineEl.textContent = ''; // clear previous
       await typeLine(lineEl, updates[i], 30);
     }
@@ -442,9 +444,8 @@ async function updateTelemetry() {
   }
 }
 
-// Fetch immediately and then every 30 seconds
-setTimeout(updateTelemetry, 2000); // wait 2s to allow initial typing
-setInterval(updateTelemetry, 30000);
+// Start
+typeInitial();
 
 // Buy button particles
 const buyBtn = document.getElementById('buyBtn');
