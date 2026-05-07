@@ -358,11 +358,9 @@ function startAnimation(){
   }
   drawScene();
 }
-
-// ------------------- Real-time Voyager 1 telemetry via Cloudflare Worker -------------------
+// --------------------Terminal Code--------------------------------------------
+// ------------------- Smooth Terminal with Rolling Decimals -------------------
 const terminal = document.getElementById('terminal');
-
-// Replace with your actual Worker URL
 const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
 
 // Placeholder lines
@@ -386,7 +384,7 @@ placeholderLines.forEach(() => {
   lineElements.push(div);
 });
 
-// Typing function
+// Typing function for placeholders
 function typeLine(lineEl, text, speed = 40) {
   return new Promise(resolve => {
     let i = 0;
@@ -406,31 +404,64 @@ async function typeInitial() {
   for (let i = 0; i < placeholderLines.length; i++) {
     await typeLine(lineElements[i], placeholderLines[i]);
   }
-  // After initial typing completes, start live telemetry
-  fetchAndTypeTelemetry();
-  setInterval(fetchAndTypeTelemetry, 30000);
+  // After placeholders, fetch live telemetry
+  fetchAndAnimateTelemetry();
+  setInterval(fetchAndAnimateTelemetry, 30000);
 }
 
-// Function to fetch live telemetry and type
-async function fetchAndTypeTelemetry() {
+// Smoothly animate a numeric value
+function animateValue(lineEl, prefix, from, to, decimals = 9, duration = 800, rolling = true) {
+  const steps = Math.ceil(duration / 30);
+  let currentStep = 0;
+  const stepValue = (to - from) / steps;
+
+  return new Promise(resolve => {
+    const interval = setInterval(() => {
+      currentStep++;
+      let value = from + stepValue * currentStep;
+
+      // Rolling decimal effect
+      if (rolling && currentStep < steps) {
+        const factor = 10 ** (decimals - 1);
+        const jitter = (Math.random() * 2 - 1) / factor;
+        value += jitter;
+      }
+
+      lineEl.textContent = `${prefix}${value.toFixed(decimals)}${prefix.includes("DISTANCE") ? " LIGHT-DAYS" : " HOURS"}`;
+
+      if (currentStep >= steps) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 30);
+  });
+}
+
+// Store last known values for smooth animation
+let lastDistance = 0;
+let lastDelay = 0;
+
+// Fetch live telemetry and animate changes
+async function fetchAndAnimateTelemetry() {
   try {
     const res = await fetch(WORKER_URL);
     const data = await res.json();
 
-    const updates = [
-      `> TIMESTAMP: ${data.timestamp_utc}`,
-      `> DISTANCE: ${data.distance_light_days.toFixed(6)} LIGHT-DAYS`,
-      `> SIGNAL DELAY: ${data.one_way_hours.toFixed(2)} HOURS`
-    ];
+    // Animate timestamp (just retype)
+    lineElements[2].textContent = `> TIMESTAMP: ${data.timestamp_utc}`;
 
-    // Type each update line individually
-    for (let i = 0; i < updates.length; i++) {
-      const lineEl = lineElements[i + 2]; // timestamp, distance, delay
-      lineEl.textContent = ''; // clear previous
-      await typeLine(lineEl, updates[i], 30);
-    }
+    // Animate distance and signal delay smoothly with rolling decimals
+    const newDistance = data.distance_light_days;
+    const newDelay = data.one_way_hours;
 
-    // occasional glitch effect
+    await animateValue(lineElements[3], '> DISTANCE: ', lastDistance, newDistance, 9, 800, true);
+    await animateValue(lineElements[4], '> SIGNAL DELAY: ', lastDelay, newDelay, 4, 800, true);
+
+    // Update last known values
+    lastDistance = newDistance;
+    lastDelay = newDelay;
+
+    // Occasional glitch effect
     if (Math.random() < 0.05) {
       terminal.classList.add('glitch');
       setTimeout(() => terminal.classList.remove('glitch'), 200);
@@ -444,7 +475,7 @@ async function fetchAndTypeTelemetry() {
   }
 }
 
-// Start
+// Start terminal animation
 typeInitial();
 
 // Buy button particles
