@@ -360,10 +360,119 @@ function startAnimation(){
 }
 // --------------------Terminal Code--------------------------------------------
 // ------------------- Terminal Telemetry -------------------
-// ------------------- Terminal Telemetry Fixed (No Duplicates) -------------------
+// ---------------- Terminal Telemetry with Fractional Light-Day ----------------
+// ---------------- Terminal Telemetry with Smooth Updates ----------------
 const terminal = document.getElementById('terminal');
-const WORKER_URL = 'https://voyager1-proxy.solosolol.workers.dev/';
 
+// ---------------- Cursor ----------------
+let cursorVisible = true;
+const cursorChar = '_';
+let cursorLineIndex = 0;
+
+setInterval(() => {
+  const line = terminal.children[cursorLineIndex];
+  if (!line) return;
+
+  if (cursorVisible) {
+    if (!line.textContent.endsWith(cursorChar)) line.textContent += cursorChar;
+  } else {
+    if (line.textContent.endsWith(cursorChar)) line.textContent = line.textContent.slice(0, -1);
+  }
+  cursorVisible = !cursorVisible;
+}, 500);
+
+// ---------------- Subtle Glitch ----------------
+function glitchTerminal() {
+  Array.from(terminal.children).forEach(line => {
+    if (Math.random() < 0.02) {
+      line.style.transform = `translate(${Math.random()*2-1}px, ${Math.random()*2-1}px)`;
+      line.style.opacity = 0.85 + Math.random()*0.15;
+      setTimeout(() => {
+        line.style.transform = '';
+        line.style.opacity = '';
+      }, 80);
+    }
+  });
+}
+setInterval(glitchTerminal, 100);
+
+// ---------------- Safe Type Line ----------------
+const typingIntervals = new Map();
+
+function typeLine(element, text, delay = 25) {
+  return new Promise(resolve => {
+    if (typingIntervals.has(element)) clearInterval(typingIntervals.get(element));
+    typingIntervals.delete(element);
+
+    let i = 0;
+    element.textContent = '';
+    cursorLineIndex = Array.from(terminal.children).indexOf(element);
+
+    const interval = setInterval(() => {
+      if (element.textContent.endsWith(cursorChar)) element.textContent = element.textContent.slice(0, -1);
+      element.textContent += text[i];
+      i++;
+      if (i >= text.length) {
+        clearInterval(interval);
+        typingIntervals.delete(element);
+        if (!element.textContent.endsWith(cursorChar)) element.textContent += cursorChar;
+        resolve();
+      }
+    }, delay);
+
+    typingIntervals.set(element, interval);
+  });
+}
+
+// ---------------- Smooth Number Animation ----------------
+function animateValue(element, start, end, duration, formatFunc) {
+  const startTime = performance.now();
+  function step(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const value = start + (end - start) * progress;
+    element.textContent = formatFunc(value);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ---------------- Live Telemetry Update ----------------
+let lastData = null;
+
+async function updateTelemetry() {
+  try {
+    const res = await fetch('https://voyager1-proxy.solosolol.workers.dev/', { cache: "no-store" });
+    const data = res.ok ? await res.json() : {};
+
+    const timestamp = data.timestamp_utc || new Date().toISOString();
+    const distance = typeof data.distance_light_days === 'number' ? data.distance_light_days : 0;
+    const delayHours = typeof data.one_way_light_seconds === 'number' ? (data.one_way_light_seconds / 3600) : 0;
+
+    // Smooth animation for distance
+    if (lastData) {
+      animateValue(terminal.children[3], lastData.distance, distance, 1000, v => `> DISTANCE: ${v.toFixed(9)} LIGHT-DAYS`);
+      animateValue(terminal.children[4], lastData.delay, delayHours, 1000, v => `> SIGNAL DELAY: ${v.toFixed(4)} HOURS`);
+    } else {
+      terminal.children[3].textContent = `> DISTANCE: ${distance.toFixed(9)} LIGHT-DAYS`;
+      terminal.children[4].textContent = `> SIGNAL DELAY: ${delayHours.toFixed(4)} HOURS`;
+    }
+
+    terminal.children[2].textContent = `> TIMESTAMP: ${timestamp}`;
+    terminal.children[5].textContent = '> STATUS: ACTIVE';
+
+    lastData = { distance, delay: delayHours };
+
+  } catch (err) {
+    console.error('Telemetry fetch failed:', err);
+    const now = new Date().toISOString();
+    terminal.children[2].textContent = `> TIMESTAMP: ${now}`;
+    terminal.children[3].textContent = '> DISTANCE: DATA UNAVAILABLE';
+    terminal.children[4].textContent = '> SIGNAL DELAY: DATA UNAVAILABLE';
+    terminal.children[5].textContent = '> STATUS: ACTIVE';
+  }
+}
+
+// ---------------- Initialize Terminal ----------------
 const placeholderLines = [
   '> CONNECTING TO VOYAGER 1...',
   '> SIGNAL LOCKED',
@@ -375,90 +484,22 @@ const placeholderLines = [
 ];
 
 terminal.innerHTML = '';
-const lineElements = placeholderLines.map(() => {
+placeholderLines.forEach(text => {
   const div = document.createElement('div');
+  div.textContent = text;
   terminal.appendChild(div);
-  return div;
 });
 
-// ---------------- Cursor Setup (Last Line Only) ----------------
-let cursorVisible = true;
-const cursorChar = '_';
-const lastLineIndex = lineElements.length - 1;
-
-setInterval(() => {
-  const lastLine = lineElements[lastLineIndex];
-  if (!lastLine) return;
-
-  if (cursorVisible) {
-    if (!lastLine.textContent.endsWith(cursorChar)) lastLine.textContent += cursorChar;
-  } else {
-    if (lastLine.textContent.endsWith(cursorChar)) lastLine.textContent = lastLine.textContent.slice(0, -1);
-  }
-
-  cursorVisible = !cursorVisible;
-}, 500);
-
-// ---------------- Typing Function (Overwrite instead of append) ----------------
-function typeLine(element, text, delay = 30) {
-  return new Promise(resolve => {
-    let i = 0;
-    element.textContent = ''; // Clear the line before typing
-
-    const interval = setInterval(() => {
-      // Remove cursor if last line
-      if (element === lineElements[lastLineIndex] && element.textContent.endsWith(cursorChar)) {
-        element.textContent = element.textContent.slice(0, -1);
-      }
-
-      element.textContent += text[i];
-      i++;
-      if (i >= text.length) {
-        clearInterval(interval);
-        if (element === lineElements[lastLineIndex] && !element.textContent.endsWith(cursorChar)) {
-          element.textContent += cursorChar;
-        }
-        resolve();
-      }
-    }, delay);
-  });
-}
-
-// ---------------- Initial Typing ----------------
-async function typePlaceholders() {
+// ---------------- Start ----------------
+(async () => {
   for (let i = 0; i < placeholderLines.length; i++) {
-    await typeLine(lineElements[i], placeholderLines[i], 25);
+    await typeLine(terminal.children[i], placeholderLines[i]);
   }
-}
 
-// ---------------- Telemetry Fetch ----------------
-async function updateTelemetry() {
-  try {
-    const res = await fetch(WORKER_URL, { cache: "no-store" });
-    const data = res.ok ? await res.json() : {};
-
-    const timestamp = data.timestamp_utc || new Date().toISOString();
-    const distance = typeof data.distance_light_days === 'number' ? data.distance_light_days.toFixed(9) : 'N/A';
-    const delayHours = typeof data.one_way_light_seconds === 'number' ? (data.one_way_light_seconds / 3600).toFixed(4) : 'N/A';
-
-    // Overwrite lines instead of appending
-    lineElements[2].textContent = `> TIMESTAMP: ${timestamp}`;
-    lineElements[3].textContent = `> DISTANCE: ${distance} LIGHT-DAYS`;
-    lineElements[4].textContent = `> SIGNAL DELAY: ${delayHours} HOURS`;
-    lineElements[5].textContent = '> STATUS: ACTIVE';
-  } catch (err) {
-    console.error('Telemetry fetch failed:', err);
-    const now = new Date().toISOString();
-    lineElements[2].textContent = `> TIMESTAMP: ${now}`;
-    lineElements[3].textContent = '> DISTANCE: DATA UNAVAILABLE';
-    lineElements[4].textContent = '> SIGNAL DELAY: DATA UNAVAILABLE';
-    lineElements[5].textContent = '> STATUS: ACTIVE';
-  }
-}
-
-// ---------------- Run Terminal ----------------
-typePlaceholders().then(updateTelemetry);
-setInterval(updateTelemetry, 30000);
+  // Fetch telemetry every second
+  await updateTelemetry();
+  setInterval(updateTelemetry, 1000);
+})();
 
 
 
